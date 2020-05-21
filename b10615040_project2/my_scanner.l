@@ -59,7 +59,7 @@ type			{token(TYPE);}
 val				{token(VAL);}
 var				{token(VAR);}
 while			{token(WHILE);}
-
+read      {token(READ);}
 
 
   /* double operator*/

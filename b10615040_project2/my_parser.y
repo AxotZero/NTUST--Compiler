@@ -23,8 +23,9 @@ void VariablTypeInconsistant();
     string *sval;
     SingleValue* single_value;
 
-    VarSymbol* arguement;
-    vector<VarSymbol*>* arguments;
+    VarSymbol* func_dec_arg;
+    vector<VarSymbol*>* func_dec_args;
+    vector<SingleValue*>* func_call_args;
     VarType type;
 }
 
@@ -33,7 +34,7 @@ void VariablTypeInconsistant();
 // operator
 %token OR AND LE EE GE NE
 // keyword
-%token  BOOLEAN BREAK CHAR CASE CLASS CONTINUE DEF DO ELSE EXIT FALSE FLOAT FOR IF INT OBJECT PRINT PRINTLN REPEAT RETURN STRING TO TRUE TYPE VAL VAR WHILE
+%token  BOOLEAN BREAK CHAR CASE CLASS CONTINUE DEF DO ELSE EXIT FALSE FLOAT FOR IF INT OBJECT PRINT PRINTLN REPEAT RETURN STRING TO TRUE TYPE VAL VAR WHILE READ
 
 // Constant and identifier
 %token  <sval>  ID
@@ -44,9 +45,10 @@ void VariablTypeInconsistant();
 
 /* define return type of non-terminal */
 %type   <single_value> const_val expression
-%type   <arguement> arg
-%type   <arguments> args
-%type   <type> var_type return_type
+%type   <func_dec_arg> arg
+%type   <func_dec_args> args
+%type   <func_call_args> comma_separated_expressions
+%type   <type> var_type return_type func_call
 
 /* operator precedence */
 %left OR
@@ -93,7 +95,7 @@ var_dec:
     VAR ID ':' var_type '=' expression
     {
         if($4 != $6->type) VariablTypeInconsistant();
-        InsertSymbolTable(new VarSymbol(*$2, Constant, *$6));
+        InsertSymbolTable(new VarSymbol(*$2, Variable, *$6));
     }|
     VAR ID '=' expression
     {   
@@ -174,7 +176,7 @@ method_dec:
         {
             InsertSymbolTable((*$4)[i]);
         }
-    } '{' const_var_decs statements'}'
+    } '{' const_var_decs empty_or_more_statements'}'
     {
         Trace("Reducing to method_dec");
         symbol_tables.dump();
@@ -213,26 +215,312 @@ return_type:
         $$ = None;
     };
 
-statements:
-    statement statements;
-    |;
+empty_or_more_statements:
+    /* empty */
+    |statements empty_or_more_statements;
 
-statement:
+statements:
+    simple_statement
+    |block
+    |conditional
+    |loop
+    |func_call
+    {
+        if($1 != None) yyerror("procedure invocation should not have return value"); 
+    };
+
+simple_statement:
     ID '=' expression
     {
         Symbol* id = symbol_tables.lookup(*$1);
         if(id == NULL) SymbolNotFound(*$1);
+        if(id->get_declaration() != Variable){ yyerror(string("Symbol:") + id->get_id_name() + " is not an varaible");}
         if(id->get_type() != $3->get_type()) VariablTypeInconsistant();
-        
-        id->set(*$3);
-    };
+        id->set_value(*$3);
+    }|
+    ID '[' expression ']' '=' expression
+    {
+        if($3->get_type() != Integer) yyerror("Array Index must be integer");
+        Symbol* id = symbol_tables.lookup(*$1);
+        if(id == NULL) SymbolNotFound(*$1);
+        if(id->get_type() != $3->get_type()) VariablTypeInconsistant();
+        id->assign_value(*$6, $3->ival);
+    }|
+    PRINT '(' expression ')'
+    | PRINTLN '(' expression ')'
+    | READ ID
+    {
+        Symbol* id = symbol_tables.lookup(*$2);
+        if(id == NULL) SymbolNotFound(*$2);
+    }
+    | RETURN
+    | RETURN expression;
 
 expression:
     const_val
     {
         $$ = $1;
-    }
+    }|
+    ID
+    {
+        Symbol* id = symbol_tables.lookup(*$1);
+        if(id == NULL) {SymbolNotFound(*$1);}
+        SingleValue s = id->get_value();
+        $$ = &s;
+    }|
+    '-' expression %prec UMINUS
+    {
+        VarType temp_type = $2->get_type();
+        if(temp_type == Integer)
+        {
+            $2->ival *= -1;
+            $$ = $2;
+        } 
+        else if(temp_type == Float)
+        {
+            $2->fval *= -1;
+            $$ = $2;
+        }
+        else
+        {
+            yyerror("Value after Unary operator '-' can only be Integer or Float");
+        }
+    }|
+    '!' expression
+    {
+        if($2->get_type() != Boolean)
+        {
+            yyerror("Value after operator'!' can only be Boolean");
+        }
+        $2->bval = !$2->bval;
+        $$ = $2;
+    } |
+    expression OR expression
+    {
+        if($1->get_type() != Boolean || $3->get_type() != Boolean)
+        {
+            yyerror("Value between operator '||' can only be Boolean");
+        }
+        SingleValue* s = new SingleValue(Boolean);
+        s->set_boolean($1->bval || $3->bval);
+        $$ = s;
+    } |
+    expression AND expression
+    {
+        if($1->get_type() != Boolean || $3->get_type() != Boolean)
+        {
+            yyerror("Value between operator '&&' can only be Boolean");
+        }
+        SingleValue* s = new SingleValue(Boolean);
+        s->set_boolean($1->bval && $3->bval);
+        $$ = s;
+    } |
+    expression '+' expression
+    {
+        if($1->get_type() != $3->get_type()) VariablTypeInconsistant();
+        if($1->get_type() == Integer || $1->get_type() == Float)
+        {
+            SingleValue s = *$1 + *$3;
+            $$ = &s;
+        }
+        else
+        {
+            yyerror("Values between operator '+' can only be Integer or Float");
+        }
+    } |
+    expression '-' expression
+    {
+        if($1->get_type() != $3->get_type()) VariablTypeInconsistant();
+        if($1->get_type() == Integer || $1->get_type() == Float)
+        {
+            SingleValue s = *$1 - *$3;
+            $$ = &s;
+        }
+        else
+        {
+            yyerror("Values between operator '-' can only be Integer or Float");
+        }
+    }|
+    expression '*' expression
+    {
+        if($1->get_type() != $3->get_type()) VariablTypeInconsistant();
+        if($1->get_type() == Integer || $1->get_type() == Float)
+        {
+            SingleValue s = *$1 * *$3;
+            $$ = &s;
+        }
+        else
+        {
+            yyerror("Values between operator '*' can only be Integer or Float");
+        }
+    }|
+    expression '/' expression
+    {
+        if($1->get_type() != $3->get_type()) VariablTypeInconsistant();
+        if($1->get_type() == Integer || $1->get_type() == Float)
+        {
+            SingleValue s = *$1 / *$3;
+            $$ = &s;
+        }
+        else
+        {
+            yyerror("Values between operator '/' can only be Integer or Float");
+        }
+    }|
+    expression '<' expression
+    {
+        if($1->get_type() != $3->get_type()) VariablTypeInconsistant();
+        if($1->get_type() == Integer || $1->get_type() == Float || $1->get_type() == Boolean)
+        {
+            
+            SingleValue s = *$1 < *$3;
+            $$ = &s;
+        }
+        else
+        {
+            yyerror("Values between operator '<' can only be Integer, Float, or Boolean");
+        }
+    }|
+    expression '>' expression
+    {
+        if($1->get_type() != $3->get_type()) VariablTypeInconsistant();
+        if($1->get_type() == Integer || $1->get_type() == Float || $1->get_type() == Boolean)
+        {
+            SingleValue s = *$1 > *$3;
+            $$ = &s;
+        }
+        else
+        {
+            yyerror("Values between operator '>' can only be Integer, Float, or Boolean");
+        }
+    }|
+    expression LE expression
+    {
+        if($1->get_type() != $3->get_type()) VariablTypeInconsistant();
+        if($1->get_type() == Integer || $1->get_type() == Float || $1->get_type() == Boolean)
+        {
+            SingleValue s = *$1 <= *$3;
+            $$ = &s;
+        }
+        else
+        {
+            yyerror("Values between operator '<=' can only be Integer, Float, or Boolean");
+        }
+    }|
+    expression EE expression
+    {
+        if($1->get_type() != $3->get_type()) VariablTypeInconsistant();
+        if($1->get_type() == Integer || $1->get_type() == Float || $1->get_type() == Boolean)
+        {
+            SingleValue s = *$1 == *$3;
+            $$ = &s;
+        }
+        else
+        {
+             yyerror("Values between operator '==' can only be Integer, Float, or Boolean");
+        }
+    }|
+    expression GE expression
+    {
+        if($1->get_type() != $3->get_type()) VariablTypeInconsistant();
+        if($1->get_type() == Integer || $1->get_type() == Float || $1->get_type() == Boolean)
+        {
+            SingleValue s = *$1 >= *$3;
+            $$ = &s;
+        }
+        else
+        {
+             yyerror("Values between operator '>=' can only be Integer, Float, or Boolean");
+        }
+    }|
+    expression NE expression
+    {
+        if($1->get_type() != $3->get_type()) VariablTypeInconsistant();
+        if($1->get_type() == Integer || $1->get_type() == Float || $1->get_type() == Boolean)
+        {
+            SingleValue s = *$1 != *$3;
+            $$ = &s;
+        }
+        else
+        {
+             yyerror("Values between operator '!=' can only be Integer, Float, or Boolean");
+        }
+    }|
+    ID '[' expression ']'
+    {
+        if($3->get_type() != Integer) yyerror("Array Index must be integer");
 
+        Symbol* id = symbol_tables.lookup(*$1);
+        if(id == NULL) {SymbolNotFound(*$1);}
+        if(id->get_declaration() != Function){ yyerror(string("Symbol:") + id->get_id_name() + " is not an array");}
+        SingleValue s = id->get_value($3->ival);
+        $$ = &s;
+    } |
+    func_call
+    {
+        SingleValue s = SingleValue($1);
+        $$ = &s;
+    };
+
+func_call:
+    ID '(' comma_separated_expressions ')'
+    {
+        Symbol* func = symbol_tables.lookup(*$1);
+        
+        if(func == NULL) { SymbolNotFound(*$1);}
+        if(func->get_declaration() != Function){ yyerror(string("Symbol:") + func->get_id_name() + " is not a function");}
+        if(func->check_input_types($3) == false){ yyerror("Function arguments does not match");}
+        if(func->get_return_type() == None){ yyerror(string("Function:") + func->get_id_name() + " has no return type");}
+        $$ = func->get_return_type();
+    };
+
+comma_separated_expressions:
+    expression
+    {
+        vector<SingleValue*>* vsv = new vector<SingleValue*>();
+        vsv->push_back($1);
+        $$ = vsv;
+    } |
+    comma_separated_expressions ',' expression{
+        $1->push_back($3);
+        $$ = $1;
+    } |
+    /* empty */
+    {
+        $$ = new vector<SingleValue*>();
+    };
+
+block:
+    '{' const_var_decs statements empty_or_more_statements '}';
+
+block_or_statement:
+    block
+    | empty_or_more_statements;
+
+conditional:
+    IF '(' expression ')' block_or_statement
+    {
+        
+        if($3->get_type() != Boolean) yyerror("Conditional statement should be boolean value");
+    }|
+    IF '(' expression ')' block_or_statement ELSE block_or_statement
+    {
+        cout << "if type:" << VarTypePrint($3->get_type()) << endl;
+        if($3->get_type() != Boolean) yyerror("Conditional statement should be boolean value");
+    };
+
+loop:
+    WHILE '(' expression ')' block_or_statement
+    {
+        if($3->get_type() != Boolean) yyerror("while statement should be boolean value");
+    } |
+    FOR '(' ID '<' '-' CONST_INT TO CONST_INT ')' block_or_statement
+    {
+        Symbol* id = symbol_tables.lookup(*$3);
+        if(id == NULL) {SymbolNotFound(*$3);}
+        if(id->get_declaration() != Variable){ yyerror(string("Symbol:") + id->get_id_name() + " is not an varaible");}
+        if(id->get_type() != Integer) yyerror("Variable in for loop should be integer");
+    }
 
 
 %%

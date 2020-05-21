@@ -48,10 +48,10 @@ public:
 	};
 	VarType type;
 	bool dirty = true;
+	VarType get_type(){return type;}
 	SingleValue(): type(Integer){dirty = false;}
 	SingleValue(VarType t): type(t){dirty = false;}
-	
-	VarType get_type(){return type;}
+
 	void set_string(string* s){sval = s; dirty = true;}
 	void set_int(int s){ival = s; dirty = true;}
 	void set_boolean(bool s){bval = s; dirty = true;}
@@ -59,38 +59,7 @@ public:
 	void set_float(float s){fval = s; dirty = true;}
 };
 
-class Symbol{
-private:
-    string id_name;
-    SymbolDeclaration declaration;
-    
-public:
-    Symbol(string id, SymbolDeclaration declaration):id_name(id), declaration(declaration){}
-    
-    string get_id_name(){
-        return id_name;
-    }
-    
-	// for VarSymbol
-	virtual bool is_dirty(){return false;}
-	virtual VarType get_type(){return None;}
-	virtual void set(SingleValue t) {}
-
-	// for ArraySymbol
-	virtual void assign_value(SingleValue value, int index){}
-	virtual void assign_array(SingleValue* value){}
-
-	// for all
-    virtual void print_info(){
-		string print_declaration = "Constant";
-		switch(declaration){
-			case Variable: print_declaration = "Variable"; break;
-			case Function: print_declaration = "Function"; break;
-			case Object: print_declaration = "Object"; break;
-		}
-		cout << "id: " << id_name << ", declaration: " << print_declaration;
-	}
-};
+// operator overloading
 
 ostream& operator<<(ostream& os, const SingleValue& dt)
 {
@@ -104,6 +73,209 @@ ostream& operator<<(ostream& os, const SingleValue& dt)
     return os;
 }
 
+
+SingleValue operator + (SingleValue lhs, const SingleValue& rhs)
+{
+	SingleValue s = SingleValue(lhs.get_type());
+	if(lhs.dirty == false || rhs.dirty == false)
+		return s;
+
+	switch(s.get_type())
+	{
+		case Integer: s.set_int(lhs.ival + rhs.ival); break;
+		case Float: s.set_float(lhs.fval + rhs.fval); break;
+	}
+	return s;
+}
+
+SingleValue operator - (SingleValue lhs, const SingleValue& rhs)
+{
+	SingleValue s = SingleValue(lhs.get_type());
+	if(lhs.dirty == false || rhs.dirty == false)
+		return s;
+
+	switch(s.get_type())
+	{
+		case Integer: s.set_int(lhs.ival - rhs.ival); break;
+		case Float: s.set_float(lhs.fval - rhs.fval); break;
+	}
+	return s;
+}
+
+SingleValue operator * (SingleValue lhs, const SingleValue& rhs)
+{
+	SingleValue s = SingleValue(lhs.get_type());
+	if(lhs.dirty == false || rhs.dirty == false)
+		return s;
+
+	switch(s.get_type())
+	{
+		case Integer: s.set_int(lhs.ival * rhs.ival); break;
+		case Float: s.set_float(lhs.fval * rhs.fval); break;
+	}
+	return s;
+}
+
+SingleValue operator / (SingleValue lhs, const SingleValue& rhs)
+{
+	SingleValue s = SingleValue(lhs.get_type());
+	if(lhs.dirty == false || rhs.dirty == false)
+		return s;
+
+	switch(s.get_type())
+	{
+		case Integer: s.set_int(lhs.ival / rhs.ival); break;
+		case Float: s.set_float(lhs.fval / rhs.fval); break;
+	}
+	return s;
+}
+
+SingleValue operator < (SingleValue lhs, const SingleValue& rhs)
+{
+	SingleValue s = SingleValue(Boolean);
+	if(lhs.dirty == false || rhs.dirty == false)
+		return s;
+
+	switch(lhs.get_type())
+	{
+		case Integer: s.set_boolean(lhs.ival < rhs.ival); break;
+		case Float: s.set_boolean(lhs.fval < rhs.fval); break;
+		case Boolean: s.set_boolean(lhs.bval < rhs.bval); break;
+	}
+	
+	return s;
+}
+
+SingleValue operator > (SingleValue lhs, const SingleValue& rhs)
+{
+	SingleValue s = SingleValue(Boolean);
+	if(lhs.dirty == false || rhs.dirty == false)
+		return s;
+
+	switch(lhs.get_type())
+	{
+		case Integer: s.set_boolean(lhs.ival > rhs.ival); break;
+		case Float: s.set_boolean(lhs.fval > rhs.fval); break;
+		case Boolean: s.set_boolean(lhs.bval > rhs.bval); break;
+	}
+	return s;
+}
+
+SingleValue operator <= (SingleValue lhs, const SingleValue& rhs)
+{
+	SingleValue s = SingleValue(Boolean);
+	if(lhs.dirty == false || rhs.dirty == false)
+		return s;
+
+	switch(lhs.get_type())
+	{
+		case Integer: s.set_boolean(lhs.ival <= rhs.ival); break;
+		case Float: s.set_boolean(lhs.fval <= rhs.fval); break;
+		case Boolean: s.set_boolean(lhs.bval <= rhs.bval); break;
+	}
+	return s;
+}
+
+SingleValue operator == (SingleValue lhs, const SingleValue& rhs)
+{
+	SingleValue s = SingleValue(Boolean);
+	if(lhs.dirty == false || rhs.dirty == false)
+		return s;
+
+	switch(lhs.get_type())
+	{
+		case Integer: s.set_boolean(lhs.ival == rhs.ival); break;
+		case Float: s.set_boolean(lhs.fval == rhs.fval); break;
+		case Boolean: s.set_boolean(lhs.bval == rhs.bval); break;
+	}
+	return s;
+}
+
+SingleValue operator >= (SingleValue lhs, const SingleValue& rhs)
+{
+	SingleValue s = SingleValue(Boolean);
+	if(lhs.dirty == false || rhs.dirty == false)
+		return s;
+
+	switch(lhs.get_type())
+	{
+		case Integer: s.set_boolean(lhs.ival >= rhs.ival); break;
+		case Float: s.set_boolean(lhs.fval >= rhs.fval); break;
+		case Boolean: s.set_boolean(lhs.bval >= rhs.bval); break;
+	}
+	return s;
+}
+
+SingleValue operator != (SingleValue lhs, const SingleValue& rhs)
+{
+	SingleValue s = SingleValue(Boolean);
+	if(lhs.dirty == false || rhs.dirty == false)
+		return s;
+
+	switch(lhs.get_type())
+	{
+		case Integer: s.set_boolean(lhs.ival != rhs.ival); break;
+		case Float: s.set_boolean(lhs.fval != rhs.fval); break;
+		case Boolean: s.set_boolean(lhs.bval != rhs.bval); break;
+	}
+	return s;
+}
+
+SingleValue operator && (SingleValue lhs, const SingleValue& rhs)
+{
+	SingleValue s = SingleValue(Boolean);
+	if(lhs.dirty == false || rhs.dirty == false)
+		return s;
+
+	switch(lhs.get_type())
+	{
+		case Integer: s.set_boolean(lhs.ival != rhs.ival); break;
+		case Float: s.set_boolean(lhs.fval != rhs.fval); break;
+		case Boolean: s.set_boolean(lhs.bval != rhs.bval); break;
+	}
+	return s;
+}
+
+class Symbol{
+private:
+    string id_name;
+    SymbolDeclaration declaration;
+    
+public:
+    Symbol(string id, SymbolDeclaration declaration):id_name(id), declaration(declaration){}
+    
+    string get_id_name(){ return id_name; }
+	SymbolDeclaration get_declaration(){return declaration;}
+    
+	// for VarSymbol
+	virtual bool is_dirty(){return false;}
+	virtual VarType get_type(){return None;}
+	virtual void set_value(SingleValue t) {}
+	virtual SingleValue get_value(){return SingleValue();}
+
+	// for ArraySymbol
+	virtual void assign_value(SingleValue value, int index){}
+	virtual void assign_array(SingleValue* value){}
+	virtual SingleValue get_value(int index){return SingleValue();}
+
+
+	// for FuncSymbol
+	virtual bool check_input_types(vector<SingleValue*>* input){return false;}
+	virtual VarType get_return_type(){return None;}
+
+	// for all
+    virtual void print_info(){
+		string print_declaration = "Constant";
+		switch(declaration){
+			case Variable: print_declaration = "Variable"; break;
+			case Function: print_declaration = "Function"; break;
+			case Object: print_declaration = "Object"; break;
+		}
+		cout << "id: " << id_name << ", declaration: " << print_declaration;
+	}
+};
+
+
 class VarSymbol: public Symbol{
 private:
     SingleValue content;
@@ -115,7 +287,8 @@ public:
 
 	bool is_dirty(){return content.dirty;}
 	VarType get_type(){return content.get_type();}
-	void set(SingleValue t) {content = t;}
+	void set_value(SingleValue t) {content = t;}
+	SingleValue get_value(){ return content; }
 
     void print_info(){
         Symbol::print_info();
@@ -141,6 +314,12 @@ public:
 	void assign_array(SingleValue* value){
 		content = value;
 	}
+
+	SingleValue get_value(int index){
+		return content[index];
+	}
+
+	VarType get_type(){return type;}
 	
 	void print_info(){
         Symbol::print_info();
@@ -171,6 +350,17 @@ public:
 		return_type = vt;
 	}
 
+	VarType get_return_type(){return return_type;}
+
+	bool check_input_types(vector<SingleValue*>* input){
+		if(input->size() != input_types.size()) return false;
+		for(int i = 0; i < input->size(); ++i){
+			if((*input)[i]->get_type() != input_types[i])
+				return false;
+		}
+		return true;
+	}
+
     void print_info(){
         Symbol::print_info();
         cout << ", input_types: {";
@@ -187,20 +377,6 @@ private:
 	map<string, Symbol*> table;
 	
 public:
-
-	int get_hash_index(string s){
-		const int p = 31;
-	    const int m = 1e9 + 9;
-	    int hash_value = -1;
-	    int p_pow = 1;
-	    while(hash_value <= 0){
-	    	for (char c : s) {
-		        hash_value = (hash_value + (c - 'a' + 1) * p_pow) % m;
-		        p_pow = (p_pow * p) % m;
-	    	}
-	    }
-	    return hash_value;
-	}
 
     Symbol* lookup(string s){
 		if (table.find(s) != table.end()) {
