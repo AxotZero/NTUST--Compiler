@@ -2,7 +2,7 @@
 
 #include "y.tab.hpp"
 
-bool Debug = true; 
+bool Debug = false; 
 #define LIST     strcat(buf,yytext)
 #define token(t) { LIST; if(Debug) printf("<%s>\n", #t); return t;}
 #define tokenSingleOperator(t) { LIST; if(Debug) printf("<'%c'>\n", t);}

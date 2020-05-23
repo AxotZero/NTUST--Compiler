@@ -62,10 +62,12 @@ void VariablTypeInconsistant();
 %%
 
 program: 
-    OBJECT ID '{' const_var_decs  method_decs '}'
+    OBJECT ID 
+    {
+        InsertSymbolTable(new Symbol(*$2, Object));
+    } '{' const_var_decs  method_decs '}'
     {
         Trace("Reducing to program");
-        InsertSymbolTable(new Symbol(*$2, Object));
         symbol_tables.dump();
         symbol_tables.pop();
     };
@@ -104,8 +106,7 @@ var_dec:
     VAR ID ':' var_type
     {
         InsertSymbolTable(new VarSymbol(*$2, Variable, $4));
-    }
-    ;
+    };
 
 var_type:
     BOOLEAN
@@ -135,7 +136,7 @@ const_val:
     CONST_STR 
     {   
         SingleValue* s = new SingleValue(String);
-        s->set_boolean($1);
+        s->set_string($1);
         $$ = s;
     } | 
     CONST_INT
@@ -176,7 +177,7 @@ method_dec:
         {
             InsertSymbolTable((*$4)[i]);
         }
-    } '{' const_var_decs empty_or_more_statements'}'
+    } '{' const_var_decs empty_or_more_statements '}'
     {
         Trace("Reducing to method_dec");
         symbol_tables.dump();
@@ -210,7 +211,7 @@ return_type:
     {
         $$ = $2;
     } | 
-    
+    /* empty */
     {
         $$ = None;
     };
@@ -222,7 +223,7 @@ empty_or_more_statements:
 statements:
     simple_statement
     |block
-    |conditional
+    |if_condition
     |loop
     |func_call
     {
@@ -465,6 +466,7 @@ expression:
 func_call:
     ID '(' comma_separated_expressions ')'
     {
+        cout << "function call" << endl;
         Symbol* func = symbol_tables.lookup(*$1);
         
         if(func == NULL) { SymbolNotFound(*$1);}
@@ -491,35 +493,51 @@ comma_separated_expressions:
     };
 
 block:
-    '{' const_var_decs statements empty_or_more_statements '}';
+    '{' 
+    {
+        symbol_tables.push();
+    } const_var_decs statements empty_or_more_statements '}'
+    {
+        Trace("Reducing to block")
+        symbol_tables.dump();
+        symbol_tables.pop();
+    };
 
 block_or_statement:
     block
-    | empty_or_more_statements;
+    | simple_statement;
 
-conditional:
-    IF '(' expression ')' block_or_statement
+if_condition:
+    IF '(' expression ')'
     {
-        
         if($3->get_type() != Boolean) yyerror("Conditional statement should be boolean value");
-    }|
-    IF '(' expression ')' block_or_statement ELSE block_or_statement
+    } block_or_statement else_condition
     {
-        cout << "if type:" << VarTypePrint($3->get_type()) << endl;
-        if($3->get_type() != Boolean) yyerror("Conditional statement should be boolean value");
+        Trace("Reducing to IF condition");
     };
 
+else_condition:
+    /* empty */
+    | ELSE block_or_statement;
+
 loop:
-    WHILE '(' expression ')' block_or_statement
+    WHILE '(' expression ')'
     {
         if($3->get_type() != Boolean) yyerror("while statement should be boolean value");
+    } block_or_statement
+    {
+        Trace("Reducing to WHILE-LOOP");
     } |
-    FOR '(' ID '<' '-' CONST_INT TO CONST_INT ')' block_or_statement
+    FOR '(' ID '<' '-' CONST_INT TO CONST_INT ')'
     {
         Symbol* id = symbol_tables.lookup(*$3);
         if(id == NULL) {SymbolNotFound(*$3);}
         if(id->get_declaration() != Variable){ yyerror(string("Symbol:") + id->get_id_name() + " is not an varaible");}
         if(id->get_type() != Integer) yyerror("Variable in for loop should be integer");
+        
+    } block_or_statement
+    {
+        Trace("Reducing to FOR-LOOP");
     }
 
 
@@ -544,6 +562,7 @@ void VariablTypeInconsistant(){
 void yyerror(string msg)
 {
     cout << msg << endl;
+    exit(1);
 }
 
 int main()
