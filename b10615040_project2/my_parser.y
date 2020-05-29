@@ -12,7 +12,6 @@ void InsertSymbolTable(Symbol* s);
 void SymbolNotFound(string symbol_name);
 void VariablTypeInconsistant();
 
-
 %}
 
 %union {
@@ -42,6 +41,7 @@ void VariablTypeInconsistant();
 %token  <ival>  CONST_INT
 %token  <fval>  CONST_FLOAT
 %token  <sval>  CONST_STR
+%token  <cval>  CONST_CHAR
 
 /* define return type of non-terminal */
 %type   <single_value> const_val expression
@@ -59,6 +59,8 @@ void VariablTypeInconsistant();
 %left '*' '/'
 %nonassoc UMINUS
 
+%start program
+
 %%
 
 program: 
@@ -68,7 +70,7 @@ program:
     } '{' const_var_decs  method_decs '}'
     {
         Trace("Reducing to program");
-        symbol_tables.dump();
+        // symbol_tables.dump();
         symbol_tables.pop();
     };
 
@@ -124,6 +126,10 @@ var_type:
     FLOAT
     {
         $$ = Float;
+    }|
+    CHAR
+    {
+        $$ = Char;
     };
 
 const_val: 
@@ -145,9 +151,16 @@ const_val:
         s->set_int($1);
         $$ = s;
     } | 
-    CONST_FLOAT {
-        SingleValue* s= new SingleValue(Float);
+    CONST_FLOAT 
+    {
+        SingleValue* s = new SingleValue(Float);
         s->set_float($1);
+        $$ = s;
+    }|
+    CONST_CHAR
+    {
+        SingleValue* s = new SingleValue(Char);
+        s->set_char($1);
         $$ = s;
     };
 
@@ -180,7 +193,7 @@ method_dec:
     } '{' const_var_decs empty_or_more_statements '}'
     {
         Trace("Reducing to method_dec");
-        symbol_tables.dump();
+        // symbol_tables.dump();
         symbol_tables.pop();
     }
     ;
@@ -192,6 +205,10 @@ args:
         $$ = vvs;
     } |
     args ',' arg{
+        for(int i = 0; i < $1->size(); ++i){
+            cout << (*$1)[i] << " " << VarTypePrint((*$1)[i]->get_type()) << " ";
+        }
+        cout << endl;
         $1->push_back($3);
         $$ = $1;
     } |
@@ -264,10 +281,10 @@ expression:
     }|
     ID
     {
+        cout << "Identifier" << endl;
         Symbol* id = symbol_tables.lookup(*$1);
         if(id == NULL) {SymbolNotFound(*$1);}
-        SingleValue s = id->get_value();
-        $$ = &s;
+        $$ = id->get_value();
     }|
     '-' expression %prec UMINUS
     {
@@ -411,15 +428,8 @@ expression:
     expression EE expression
     {
         if($1->get_type() != $3->get_type()) VariablTypeInconsistant();
-        if($1->get_type() == Integer || $1->get_type() == Float || $1->get_type() == Boolean)
-        {
-            SingleValue s = *$1 == *$3;
-            $$ = &s;
-        }
-        else
-        {
-             yyerror("Values between operator '==' can only be Integer, Float, or Boolean");
-        }
+        SingleValue s = *$1 == *$3;
+        $$ = &s;
     }|
     expression GE expression
     {
@@ -437,15 +447,8 @@ expression:
     expression NE expression
     {
         if($1->get_type() != $3->get_type()) VariablTypeInconsistant();
-        if($1->get_type() == Integer || $1->get_type() == Float || $1->get_type() == Boolean)
-        {
-            SingleValue s = *$1 != *$3;
-            $$ = &s;
-        }
-        else
-        {
-             yyerror("Values between operator '!=' can only be Integer, Float, or Boolean");
-        }
+        SingleValue s = *$1 != *$3;
+        $$ = &s;
     }|
     ID '[' expression ']'
     {
@@ -454,8 +457,7 @@ expression:
         Symbol* id = symbol_tables.lookup(*$1);
         if(id == NULL) {SymbolNotFound(*$1);}
         if(id->get_declaration() != Function){ yyerror(string("Symbol:") + id->get_id_name() + " is not an array");}
-        SingleValue s = id->get_value($3->ival);
-        $$ = &s;
+        $$ = id->get_value($3->ival);
     } |
     func_call
     {
@@ -470,8 +472,11 @@ func_call:
         Symbol* func = symbol_tables.lookup(*$1);
         
         if(func == NULL) { SymbolNotFound(*$1);}
+        
         if(func->get_declaration() != Function){ yyerror(string("Symbol:") + func->get_id_name() + " is not a function");}
+
         if(func->check_input_types($3) == false){ yyerror("Function arguments does not match");}
+        
         if(func->get_return_type() == None){ yyerror(string("Function:") + func->get_id_name() + " has no return type");}
         $$ = func->get_return_type();
     };
@@ -479,13 +484,17 @@ func_call:
 comma_separated_expressions:
     expression
     {
-        vector<SingleValue*>* vsv = new vector<SingleValue*>();
-        vsv->push_back($1);
-        $$ = vsv;
+        $$ = new vector<SingleValue*>();
+        $$->push_back($1);
     } |
     comma_separated_expressions ',' expression{
+        for(int i = 0; i < $1->size(); ++i){
+            cout << (*$1)[i] << " " << VarTypePrint((*$1)[i]->get_type()) << " ";
+        }
+        cout << endl;
         $1->push_back($3);
         $$ = $1;
+
     } |
     /* empty */
     {
@@ -499,7 +508,7 @@ block:
     } const_var_decs statements empty_or_more_statements '}'
     {
         Trace("Reducing to block")
-        symbol_tables.dump();
+        // symbol_tables.dump();
         symbol_tables.pop();
     };
 
@@ -562,7 +571,7 @@ void VariablTypeInconsistant(){
 void yyerror(string msg)
 {
     cout << msg << endl;
-    exit(1);
+    // exit(1);
 }
 
 int main()

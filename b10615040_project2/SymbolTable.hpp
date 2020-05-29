@@ -31,12 +31,12 @@ public:
 	virtual bool is_dirty(){return false;}
 	virtual VarType get_type(){return None;}
 	virtual void set_value(SingleValue t) {}
-	virtual SingleValue get_value(){return SingleValue();}
+	virtual SingleValue* get_value(){return NULL;}
 
 	// for ArraySymbol
 	virtual void assign_value(SingleValue value, int index){}
 	virtual void assign_array(SingleValue* value){}
-	virtual SingleValue get_value(int index){return SingleValue();}
+	virtual SingleValue* get_value(int index){return NULL;}
 
 
 	// for FuncSymbol
@@ -68,7 +68,7 @@ public:
 	bool is_dirty(){return content.dirty;}
 	VarType get_type(){return content.get_type();}
 	void set_value(SingleValue t) {content = t;}
-	SingleValue get_value(){ return content; }
+	SingleValue* get_value(){ return &content; }
 
     void print_info(){
         Symbol::print_info();
@@ -95,8 +95,8 @@ public:
 		content = value;
 	}
 
-	SingleValue get_value(int index){
-		return content[index];
+	SingleValue* get_value(int index){
+		return &content[index];
 	}
 
 	VarType get_type(){return type;}
@@ -135,8 +135,10 @@ public:
 	bool check_input_types(vector<SingleValue*>* input){
 		if(input->size() != input_types.size()) return false;
 		for(int i = 0; i < input->size(); ++i){
-			if((*input)[i]->get_type() != input_types[i])
+			if((*input)[i]->get_type() != input_types[i]){
+				cout << i << ":"<< (*input)[i]->get_type() << " " << input_types[i] << endl;
 				return false;
+			}
 		}
 		return true;
 	}

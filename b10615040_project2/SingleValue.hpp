@@ -173,6 +173,8 @@ SingleValue operator == (SingleValue lhs, const SingleValue& rhs)
 		case Integer: s.set_boolean(lhs.ival == rhs.ival); break;
 		case Float: s.set_boolean(lhs.fval == rhs.fval); break;
 		case Boolean: s.set_boolean(lhs.bval == rhs.bval); break;
+		case String: s.set_boolean(*(lhs.sval) == *(rhs.sval)); break;
+		case Char: s.set_boolean(lhs.cval == rhs.cval); break;
 	}
 	return s;
 }
@@ -203,6 +205,8 @@ SingleValue operator != (SingleValue lhs, const SingleValue& rhs)
 		case Integer: s.set_boolean(lhs.ival != rhs.ival); break;
 		case Float: s.set_boolean(lhs.fval != rhs.fval); break;
 		case Boolean: s.set_boolean(lhs.bval != rhs.bval); break;
+		case String: s.set_boolean(*(lhs.sval) != *(rhs.sval)); break;
+		case Char: s.set_boolean(lhs.cval != rhs.cval); break;
 	}
 	return s;
 }

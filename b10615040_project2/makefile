@@ -2,7 +2,7 @@
 all: parser
 
 parser: lex.yy.cpp y.tab.cpp SymbolTable.hpp
-	g++ y.tab.cpp SymbolTable.hpp -o my_parser -ll -ly -std=c++11 -Wno-deprecated-register
+	g++ y.tab.cpp SymbolTable.hpp -o my_parser -ll -ly -std=c++11
 
 lex.yy.cpp: my_scanner.l
 	lex -o lex.yy.cpp my_scanner.l

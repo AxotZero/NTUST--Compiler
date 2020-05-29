@@ -23,6 +23,7 @@ LOGICAL			("!")
 RELATOINAL		(>|<)
 IDENTIFIER		[A-Za-z][A-Za-z0-9]*
 INTEGER 		[0-9]+
+Char      \'([A-Za-z0-9])\'
 REAL			{INTEGER}\.{INTEGER}?([Ee][+-]?{INTEGER})?
 STRING 			\"(\"\"|[^\"\n])*\"
 SINGLE_COMMENT	"//"[^\n]*
@@ -112,6 +113,12 @@ false			{
   tokenString("float", yytext);
   yylval.fval = atof(yytext);
   return CONST_FLOAT;
+}
+
+{Char}  {
+  tokenString("char", yytext);
+  yylval.cval = yytext[1];
+  return CONST_CHAR;
 }
 
 {STRING}  {
