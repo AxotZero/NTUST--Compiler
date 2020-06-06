@@ -2,13 +2,13 @@
 
 #include "y.tab.hpp"
 
-bool Debug = false; 
+bool l_debug = false; 
 #define LIST     strcat(buf,yytext)
-#define token(t) { LIST; if(Debug) printf("<%s>\n", #t); return t;}
-#define tokenSingleOperator(t) { LIST; if(Debug) printf("<'%c'>\n", t);}
-#define tokenDoubleOperator(t) { LIST; if(Debug) printf("<'%s'>\n", t);}
-#define tokenInteger(t,i) {LIST; if(Debug) printf("<%s:%d>\n", t, i);}
-#define tokenString(t,s) {LIST; if(Debug) printf("<%s:%s>\n", t, s);}
+#define token(t) { LIST; if(l_debug) printf("<%s>\n", #t); return t;}
+#define tokenSingleOperator(t) { LIST; if(l_debug) printf("<'%c'>\n", t);}
+#define tokenDoubleOperator(t) { LIST; if(l_debug) printf("<'%s'>\n", t);}
+#define tokenInteger(t,i) {LIST; if(l_debug) printf("<%s:%d>\n", t, i);}
+#define tokenString(t,s) {LIST; if(l_debug) printf("<%s:%s>\n", t, s);}
 
 #define MAX_LINE_LENG 256
 

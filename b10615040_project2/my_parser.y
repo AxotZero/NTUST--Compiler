@@ -3,8 +3,10 @@
 #include "SymbolTable.hpp"
 #include "lex.yy.cpp"
 
-bool debug = true;
-#define Trace(t)       if(debug){ printf(t); cout << endl;}
+bool y_debug = true;
+#define Trace(t)       if(y_debug){ printf(t); cout << endl;}
+#define dump()      if(y_debug){ symbol_tables.dump(); }
+
 SymbolTableList symbol_tables;
 
 void yyerror(string msg);
@@ -70,7 +72,7 @@ program:
     } '{' const_var_decs  method_decs '}'
     {
         Trace("Reducing to program");
-        // symbol_tables.dump();
+        dump();
         symbol_tables.pop();
     };
 
@@ -94,7 +96,7 @@ var_dec:
     VAR ID ':' var_type '[' CONST_INT ']'
     {
         if($6 < 1) yyerror("Array length cannot less than 1");
-        InsertSymbolTable(new ArraySymbol(*$2, Array, $4, $6));
+        InsertSymbolTable(new ArraySymbol(*$2, $4, $6));
     }|
     VAR ID ':' var_type '=' expression
     {
@@ -193,7 +195,7 @@ method_dec:
     } '{' const_var_decs empty_or_more_statements '}'
     {
         Trace("Reducing to method_dec");
-        // symbol_tables.dump();
+        dump();
         symbol_tables.pop();
     }
     ;
@@ -262,7 +264,11 @@ simple_statement:
         Symbol* id = symbol_tables.lookup(*$1);
         if(id == NULL) SymbolNotFound(*$1);
         if(id->get_type() != $3->get_type()) VariablTypeInconsistant();
-        id->assign_value(*$6, $3->ival);
+
+        if($6->dirty == true){
+            id->assign_value(*$6, $3->ival);
+        }
+        
     }|
     PRINT '(' expression ')'
     | PRINTLN '(' expression ')'
@@ -281,7 +287,6 @@ expression:
     }|
     ID
     {
-        cout << "Identifier" << endl;
         Symbol* id = symbol_tables.lookup(*$1);
         if(id == NULL) {SymbolNotFound(*$1);}
         $$ = id->get_value();
@@ -456,8 +461,15 @@ expression:
 
         Symbol* id = symbol_tables.lookup(*$1);
         if(id == NULL) {SymbolNotFound(*$1);}
-        if(id->get_declaration() != Function){ yyerror(string("Symbol:") + id->get_id_name() + " is not an array");}
-        $$ = id->get_value($3->ival);
+        if(id->get_declaration() != Array){ yyerror(string("Symbol:") + id->get_id_name() + " is not an array");}
+
+        if($3->dirty == false){
+            $$ = id->get_value(0);
+        }
+        else
+        {
+            $$ = id->get_value($3->ival);
+        }
     } |
     func_call
     {
@@ -508,7 +520,7 @@ block:
     } const_var_decs statements empty_or_more_statements '}'
     {
         Trace("Reducing to block")
-        // symbol_tables.dump();
+        dump();
         symbol_tables.pop();
     };
 

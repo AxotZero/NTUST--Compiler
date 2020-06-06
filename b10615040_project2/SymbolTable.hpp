@@ -50,6 +50,7 @@ public:
 			case Variable: print_declaration = "Variable"; break;
 			case Function: print_declaration = "Function"; break;
 			case Object: print_declaration = "Object"; break;
+			case Array: print_declaration = "Array"; break;
 		}
 		cout << "id: " << id_name << ", declaration: " << print_declaration;
 	}
@@ -83,7 +84,7 @@ private:
 	VarType type;
 	int length;
 public:
-	ArraySymbol(string id, SymbolDeclaration declaration, VarType type, int length): Symbol(id, declaration), type(type), length(length){
+	ArraySymbol(string id, VarType type, int length): Symbol(id, Array), type(type), length(length){
 		content = new SingleValue[length];
 	}
 
