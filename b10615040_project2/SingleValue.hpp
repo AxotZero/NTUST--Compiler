@@ -1,3 +1,7 @@
+/*
+This file defines the basic value unit "SingleValue" and its function.
+*/
+
 #include <string>
 #include <iostream>
 using namespace std;

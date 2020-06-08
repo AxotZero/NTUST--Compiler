@@ -1,3 +1,7 @@
+/*
+This file defines the class and function of each symbols and symboltable.
+*/
+
 #include <string>
 #include <map>
 #include <vector>
@@ -6,7 +10,6 @@
 
 using namespace std;
 
-
 enum SymbolDeclaration{
 	Constant,
 	Variable,
@@ -14,7 +17,6 @@ enum SymbolDeclaration{
 	Array,
 	Object
 };
-
 
 class Symbol{
 private:
@@ -55,7 +57,6 @@ public:
 		cout << "id: " << id_name << ", declaration: " << print_declaration;
 	}
 };
-
 
 class VarSymbol: public Symbol{
 private:
@@ -216,35 +217,12 @@ public:
 		return NULL;
 	}
 	void dump(){
+		cout << "================= Start of SymbolTable List ================ " << endl;
 		for(int i = top; i >= 0; --i){
-			cout << "Symbol Index" << i << endl;
+			cout << "**********"<< "SymbolTable Index: " << i << " ************" << endl;
 			tables[i].dump();
+			cout << "*************************************" << endl;
 		}
+		cout << "=================  End of SymbolTableList   ================= " << endl;
 	}
 };
-
-// void test(){
-// 	ArraySymbol arr_int = ArraySymbol("arr_int", Array, Integer, 20);
-// 	ArraySymbol arr_string = ArraySymbol("arr_string", Array, String, 100);
-
-// 	FuncSymbol func_arr = FuncSymbol("func", Function);
-// 	func_arr.add_input_type(Integer);
-// 	func_arr.add_input_type(Boolean);
-// 	func_arr.set_return_type(String);
-
-// 	VarSymbol var_real = VarSymbol("var_real", Variable, Real);
-
-// 	VarSymbol const_string = VarSymbol("const_string", Constant, String);
-
-// 	SingleValue a = SingleValue(String);
-// 	a.sval = new string("yayayayay");
-// 	const_string.set(a);
-
-// 	SymbolTable table;
-// 	table.insert(&arr_int);
-// 	table.insert(&arr_string);
-// 	table.insert(&func_arr);
-// 	table.insert(&var_real);
-// 	table.insert(&const_string);
-// 	table.dump();
-// }

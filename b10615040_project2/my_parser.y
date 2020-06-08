@@ -9,6 +9,7 @@ bool y_debug = true;
 
 SymbolTableList symbol_tables;
 
+ /* utilities function */
 void yyerror(string msg);
 void InsertSymbolTable(Symbol* s);
 void SymbolNotFound(string symbol_name);
@@ -32,12 +33,13 @@ void VariablTypeInconsistant();
 
 
 /* tokens*/
-// operator
+// define two char operator
 %token OR AND LE EE GE NE
-// keyword
+
+// define keyword
 %token  BOOLEAN BREAK CHAR CASE CLASS CONTINUE DEF DO ELSE EXIT FALSE FLOAT FOR IF INT OBJECT PRINT PRINTLN REPEAT RETURN STRING TO TRUE TYPE VAL VAR WHILE READ
 
-// Constant and identifier
+// define Constant and identifier type
 %token  <sval>  ID
 %token  <bval>  CONST_BOOL
 %token  <ival>  CONST_INT
@@ -45,14 +47,14 @@ void VariablTypeInconsistant();
 %token  <sval>  CONST_STR
 %token  <cval>  CONST_CHAR
 
-/* define return type of non-terminal */
+// define return type of non-terminal
 %type   <single_value> const_val expression
 %type   <func_dec_arg> arg
 %type   <func_dec_args> args
 %type   <func_call_args> comma_separated_expressions
 %type   <type> var_type return_type func_call
 
-/* operator precedence */
+// define operator precedence
 %left OR
 %left AND
 %left '!'
@@ -62,7 +64,6 @@ void VariablTypeInconsistant();
 %nonassoc UMINUS
 
 %start program
-
 %%
 
 program: 
@@ -207,10 +208,6 @@ args:
         $$ = vvs;
     } |
     args ',' arg{
-        for(int i = 0; i < $1->size(); ++i){
-            cout << (*$1)[i] << " " << VarTypePrint((*$1)[i]->get_type()) << " ";
-        }
-        cout << endl;
         $1->push_back($3);
         $$ = $1;
     } |
@@ -480,7 +477,6 @@ expression:
 func_call:
     ID '(' comma_separated_expressions ')'
     {
-        cout << "function call" << endl;
         Symbol* func = symbol_tables.lookup(*$1);
         
         if(func == NULL) { SymbolNotFound(*$1);}
@@ -500,10 +496,6 @@ comma_separated_expressions:
         $$->push_back($1);
     } |
     comma_separated_expressions ',' expression{
-        for(int i = 0; i < $1->size(); ++i){
-            cout << (*$1)[i] << " " << VarTypePrint((*$1)[i]->get_type()) << " ";
-        }
-        cout << endl;
         $1->push_back($3);
         $$ = $1;
 
@@ -571,7 +563,6 @@ void InsertSymbolTable(Symbol* s)
     }
 }
 
-
 void SymbolNotFound(string symbol_name){
     yyerror(string("Symbol:") + symbol_name + " not found");
 }
@@ -583,7 +574,7 @@ void VariablTypeInconsistant(){
 void yyerror(string msg)
 {
     cout << msg << endl;
-    // exit(1);
+    exit(1);
 }
 
 int main()
