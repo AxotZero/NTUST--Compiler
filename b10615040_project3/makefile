@@ -1,7 +1,7 @@
 # yayayay
-all: parser
+all: compiler
 
-parser: lex.yy.cpp y.tab.cpp SymbolTable.hpp CodeGenerator.hpp
+compiler: lex.yy.cpp y.tab.cpp SymbolTable.hpp CodeGenerator.hpp
 	g++ y.tab.cpp SymbolTable.hpp CodeGenerator.hpp -o compiler -ll -ly -std=c++11
 
 lex.yy.cpp: my_scanner.l
@@ -14,6 +14,6 @@ clean:
 	rm my_parser lex.yy.* y.tab.*
 
 run: compiler
-	./compiler $(file).rust
-	javaa $(file).jasm
+	./compiler $(file).scala
+	./javaa/javaa $(file).jasm
 	java $(file)

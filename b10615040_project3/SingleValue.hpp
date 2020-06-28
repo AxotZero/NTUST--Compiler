@@ -14,6 +14,11 @@ enum VarType{
 	None
 };
 
+enum Dec{
+	Const,
+	Var
+};
+
 string VarTypePrint(VarType type){
 	string print_type;
 	switch(type){
@@ -38,7 +43,9 @@ public:
 	};
 	VarType type;
 	bool dirty = true;
+	Dec dec;
 	VarType get_type(){return type;}
+
 	SingleValue(): type(Integer){dirty = false;}
 	SingleValue(VarType t): type(t){dirty = false;}
 

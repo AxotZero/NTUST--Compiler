@@ -1,3 +1,5 @@
+#pragma once
+
 /*
 This file defines the class and function of each symbols and symboltable.
 */
@@ -165,7 +167,6 @@ private:
 public:
 	int last_index;
 	SymbolTable(){ last_index = 0;}
-	SymbolTable(int n){ last_index = n;}
 
     Symbol* lookup(string s){
 		if (table.find(s) != table.end()) {
@@ -185,34 +186,37 @@ public:
 		}
 	}
 
-    int insert(int index, Symbol* s){
+    int insert(Symbol* s){
 		if (table.find(s->get_id_name()) != table.end()) {
 			return -1;
 		}
 		else {
-			table[s->get_id_name()] = pair<int, Symbol*>(index, s);
-			last_index = index;
+			if(s->get_declaration() == Variable){
+				table[s->get_id_name()] = pair<int, Symbol*>(last_index, s);
+				++last_index;
+			}
+			else{
+				table[s->get_id_name()] = pair<int, Symbol*>(-1, s);
+			}
 			return 1;
 		}
     }
 
-    void dump(){
-    	for(auto p : table){
-    		p.second->print_info();
-    		cout << endl;
-    	}
-    }
+    // void dump(){
+    // 	for(auto p : table){
+    // 		p.second->print_info();
+    // 		cout << endl;
+    // 	}
+    // }
 };
 
 class SymbolTableList{
 private:
 	vector<SymbolTable> tables;
 	int top;
-	int last_index;
 public:
 	SymbolTableList(){ 
 		top = -1; 
-		last_index = 0;
 		push(); 
 	}
 	int get_top(){
@@ -220,22 +224,20 @@ public:
 	}
 	void push(){
 		++top;
-		tables.push_back(SymbolTable(last_index));
+		tables.push_back(SymbolTable());
 	}
 	void pop(){
 		--top;
 		tables.pop_back();
-		last_index = tables[top].last_index;
 	}
 	int insert(Symbol* s){
-		++last_index;
-		return tables[top].insert(last_index, s);
+		return tables[top].insert(s);
 	}
 	int get_index(string s){
 		for(int i = top; top >= 0; --i){
 			int index = tables[i].get_index(s);
 			if(index != -1){
-				if(top == 0) return -2;
+				if(i == 0) return -2;
 				else return index;
 			}
 		}
@@ -251,13 +253,13 @@ public:
 		}
 		return NULL;
 	}
-	void dump(){
-		cout << "================= Start of SymbolTable List ================ " << endl;
-		for(int i = top; i >= 0; --i){
-			cout << "**********"<< "SymbolTable Index: " << i << " ************" << endl;
-			tables[i].dump();
-			cout << "*************************************" << endl;
-		}
-		cout << "=================  End of SymbolTableList   ================= " << endl;
-	}
+	// void dump(){
+	// 	cout << "================= Start of SymbolTable List ================ " << endl;
+	// 	for(int i = top; i >= 0; --i){
+	// 		cout << "**********"<< "SymbolTable Index: " << i << " ************" << endl;
+	// 		tables[i].dump();
+	// 		cout << "*************************************" << endl;
+	// 	}
+	// 	cout << "=================  End of SymbolTableList   ================= " << endl;
+	// }
 };

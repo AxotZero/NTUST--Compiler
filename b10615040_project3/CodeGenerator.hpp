@@ -1,4 +1,4 @@
-#pragma once
+
 
 #include <iostream>
 #include <fstream>
@@ -17,8 +17,7 @@ private:
 
 public:
     CodeGenerator(){
-        file_name = "example";
-        output.open(file_name + ".jasm");
+        file_name = "";
         label_counter = 0;
     }
     CodeGenerator(string f){
@@ -36,8 +35,9 @@ public:
         return labels;
     }
 
-    void program_start(string object_name){
-        output << "class " << object_name << "{" << endl;
+    void program_start(){
+        output << "class " << file_name << endl;
+        output << "{" << endl;
     }
     void program_end(){
         output << "}" << endl;
@@ -45,13 +45,15 @@ public:
     void dec_global_var(string id){
         output << "field static int " << id << endl;
     }
+    void dec_global_var_with_value(string id, int value){
+        output << "field static int " << id << " = " << value << endl;
+    }
     void assign_global_var(string id){
         output << "putstatic int " << file_name << "." << id << endl;
     }
     void load_global_var(string id){
         output << "getstatic int " << file_name << "." << id << endl;
     }
-
     void assign_local_var(int id){
         output << "istore " << id << endl;
     }
@@ -84,7 +86,7 @@ public:
 
         string stream_return_type = return_type == None? "void" : "int";
         
-        output << "method public static" << stream_return_type << " " << id << "(";
+        output << "method public static " << stream_return_type << " " << id << "(";
         for(int i = 0; i < input_types.size(); ++i)
         {
             if(i >= 1) output << ", ";
@@ -98,6 +100,7 @@ public:
     void def_func_end(VarType type){
         if(type == None) output << "return" << endl;
         else output << "ireturn" << endl; 
+        output << "}" << endl;
     }
     void def_main_start(){
         output << "method public static void main(java.lang.String[])" << endl; 
@@ -150,7 +153,7 @@ public:
     }
     void if_start(){
         new_labels(1);
-        output << "ifeq " << labels[0];
+        output << "ifeq " << labels[0] << endl;
     }
     void if_end(){
         output << labels[0] << ":" << endl;
@@ -159,8 +162,8 @@ public:
         string label = labels[0];
         new_labels(1);
 
-        output << "goto " << labels[0];
-        output << labels[0] << ":" << endl;
+        output << "goto " << labels[0] << endl;
+        output << label << ":" << endl;
     }
 };
 

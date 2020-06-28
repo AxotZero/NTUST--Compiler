@@ -6,7 +6,6 @@
 
 bool y_debug = false;
 #define Trace(t)       if(y_debug){ printf(t); cout << endl;}
-#define dump()      if(y_debug){ ST.dump(); }
 
 SymbolTableList ST;
 CodeGenerator CG;
@@ -16,7 +15,6 @@ void yyerror(string msg);
 void InsertSymbolTable(Symbol* s);
 void SymbolNotFound(string symbol_name);
 void VariablTypeInconsistant();
-
 %}
 
 %union {
@@ -73,15 +71,14 @@ program:
     {
         InsertSymbolTable(new Symbol(*$2, Object));
 
-        CG.program_start(*$2);
+        CG.program_start();
 
     } '{' const_var_decs  method_decs '}'
     {
         Trace("Reducing to program");
-        dump();
         ST.pop();
 
-        CG.program_end(*$2);
+        CG.program_end();
     };
 
 const_var_decs:
@@ -112,8 +109,7 @@ var_dec:
         InsertSymbolTable(new VarSymbol(*$2, Variable, *$6));
 
         if(ST.get_top() == 0){
-            CG.dec_global_var(*$2);
-            CG.assign_global_var(*$2, *$6->ival);
+            CG.dec_global_var_with_value(*$2, $6->ival);
         }
         else{
             CG.assign_local_var(ST.get_index(*$2));
@@ -124,8 +120,7 @@ var_dec:
         InsertSymbolTable(new VarSymbol(*$2, Variable, *$4));
 
         if(ST.get_top() == 0){
-            CG.dec_global_var(*$2);
-            CG.assign_global_var(*$2, *$6->ival);
+            CG.dec_global_var_with_value(*$2, $4->ival);
         }
         else{
             CG.assign_local_var(ST.get_index(*$2));
@@ -135,6 +130,10 @@ var_dec:
     VAR ID ':' var_type
     {
         InsertSymbolTable(new VarSymbol(*$2, Variable, $4));
+
+        if(ST.get_top() == 0){
+            CG.dec_global_var(*$2);
+        }
     };
 
 var_type:
@@ -171,16 +170,12 @@ const_val:
         SingleValue* s = new SingleValue(String);
         s->set_string($1);
         $$ = s;
-
-        CG.load_const_str($1);
     } | 
     CONST_INT
     {
         SingleValue* s = new SingleValue(Integer);
         s->set_int($1);
         $$ = s;
-
-        CG.load_const_int($1);
     } | 
     CONST_FLOAT 
     {
@@ -228,7 +223,6 @@ method_dec:
     } '{' const_var_decs empty_or_more_statements '}'
     {
         Trace("Reducing to method_dec");
-        dump();
         ST.pop();
 
         CG.def_func_end($6);
@@ -290,7 +284,7 @@ simple_statement:
         id->set_value(*$3);
 
 
-        int get_index = ST.get_index(*$1)
+        int get_index = ST.get_index(*$1);
         if(get_index == -2){
             CG.assign_global_var(*$1);
         }
@@ -332,6 +326,15 @@ expression:
     const_val
     {
         $$ = $1;
+
+        if(ST.get_top() != 0){
+            if($1->get_type() == String){
+                CG.load_const_str(*($1->sval));
+            }
+            else{
+                CG.load_const_int($1->ival);
+            }
+        }
     }|
     ID
     {
@@ -339,13 +342,22 @@ expression:
         if(id == NULL) {SymbolNotFound(*$1);}
         $$ = id->get_value();
 
-
-        int get_index = ST.get_index(*$1)
-        if(get_index == -2){
-            CG.load_global_var(*$1);
+        if(ST.get_top() != 0 && id->get_declaration() == Constant){
+            if(id->get_type() == String){
+                CG.load_const_str(*(id->get_value()->sval));
+            }
+            else{
+                CG.load_const_int(id->get_value()->ival);
+            }
         }
         else{
-            CG.load_local_var(get_index);
+            int get_index = ST.get_index(*$1);
+            if(get_index == -2){
+                CG.load_global_var(*$1);
+            }
+            else{
+                CG.load_local_var(get_index);
+            }
         }
     }|
     '-' expression %prec UMINUS
@@ -616,7 +628,6 @@ block:
     } const_var_decs statements empty_or_more_statements '}'
     {
         Trace("Reducing to block")
-        dump();
         ST.pop();
     };
 
@@ -625,10 +636,9 @@ block_or_statement:
     | simple_statement;
 
 if_condition:
-    IF{
-        CG.if_start();
-    } '(' expression ')'
+    IF '(' expression ')'
     {
+        CG.if_start();
         if($3->get_type() != Boolean) yyerror("Conditional statement should be boolean value");
     } block_or_statement else_condition
     {
@@ -640,7 +650,7 @@ if_condition:
 else_condition:
     /* empty */
     | ELSE {
-        else_start()
+        CG.else_start();
     } block_or_statement;
 
 loop:
@@ -692,8 +702,8 @@ int main(int argc, char **argv) {
   yyin = fopen(argv[1], "r");
   string source = string(argv[1]);
   int dot = source.find(".");
-  filename = source.substr(0, dot);
-  out.open(filename + ".jasm");
+  string filename = source.substr(0, dot);
+  CG = CodeGenerator(filename);
 
   yyparse();
   return 0;
