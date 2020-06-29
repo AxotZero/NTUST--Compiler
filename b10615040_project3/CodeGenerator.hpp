@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <fstream>
-#include <stack>
+#include <vector>
 #include <string>
 #include "SymbolTable.hpp"
 
@@ -12,8 +12,10 @@ class CodeGenerator{
 private:
     ofstream output;
     string file_name;
+
+    bool else_flag;
     int label_counter;
-    vector<string> labels;
+    vector<vector<string>> labels_list;
 
 public:
     CodeGenerator(){
@@ -26,13 +28,19 @@ public:
         label_counter = 0;
     }
 
-    vector<string> new_labels(int num){
-        labels = vector<string>();
+    void push_labels(int num){
+        vector<string> labels;
         for(int i = 0; i < num; ++i){
             labels.push_back("L" + to_string(label_counter + i));
         }
+        labels_list.push_back(labels);
         label_counter += num;
-        return labels;
+    }
+    void pop_labels(){
+        labels_list.pop_back();
+    }
+    vector<string> get_labels(int num){
+        return labels_list[labels_list.size() - num - 1];
     }
 
     void program_start(){
@@ -114,9 +122,11 @@ public:
     }
     void func_call(Symbol* s){
         vector<VarType> input_types = s->get_input_types();
+        VarType return_type = s->get_return_type();
         string id = s->get_id_name();
+        string stream_return_type = return_type == None? "void" : "int";
 
-        output << "invokestatic int " << file_name << "." << id << "(";
+        output << "invokestatic " << stream_return_type << " " << file_name << "." << id << "(";
         for(int i = 0; i < input_types.size(); ++i)
         {
             if(i >= 1) output << ", ";
@@ -131,10 +141,17 @@ public:
         output << "invokevirtual void java.io.PrintStream.print(int)" << endl;
     }
     void print_str_end(){
+        output << "invokevirtual void java.io.PrintStream.print(java.lang.String)" << endl;
+    }
+    void println_int_end(){
+        output << "invokevirtual void java.io.PrintStream.println(int)" << endl;
+    }
+    void println_str_end(){
         output << "invokevirtual void java.io.PrintStream.println(java.lang.String)" << endl;
     }
     void relation(string op){
-        new_labels(2);
+        push_labels(2);
+        vector<string>labels = get_labels(0);
 
         output << "isub" << endl;
         if(op == "<") {output << "iflt " << labels[0] << endl;}
@@ -148,23 +165,58 @@ public:
         output << "goto " << labels[1] << endl;
 
         output << labels[0] << ":" << endl;
+        output << "nop" << endl;
+
         output << "iconst_1" << endl;
         output << labels[1] << ":" << endl;
+        output << "nop" << endl;
+
+        pop_labels();
     }
     void if_start(){
-        new_labels(1);
+        else_flag = false;
+        push_labels(1);
+        vector<string> labels = get_labels(0);
         output << "ifeq " << labels[0] << endl;
     }
     void if_end(){
+        vector<string> labels = get_labels(0);
         output << labels[0] << ":" << endl;
+        output << "nop" << endl;
+        pop_labels();
+
+        if(else_flag == true)
+            pop_labels();
+
+        else_flag = false;
     }
     void else_start(){
-        string label = labels[0];
-        new_labels(1);
-
-        output << "goto " << labels[0] << endl;
-        output << label << ":" << endl;
+        else_flag = true;
+        vector<string> labels0 = get_labels(0);
+        push_labels(1);
+        vector<string> labels1 = get_labels(0);
+        output << "goto " << labels1[0] << endl;
+        output << labels0[0] << ":" << endl;
+        output << "nop" << endl;
     }
+
+    void while_start(){
+        push_labels(1);
+        vector<string> labels = get_labels(0);
+        output << labels[0] << ":" << endl;
+        output << "nop" << endl;
+    }
+    void while_end(){
+        string exit = get_labels(0)[0];
+        pop_labels();
+        string begin = get_labels(0)[0];
+        pop_labels();
+
+        output << "goto " << begin << endl;
+        output << exit << ":" << endl;
+        output << "nop" << endl;
+    }
+
 };
 
 

@@ -18,9 +18,9 @@ object example {
   def main() {
     c = add(a, 10)
     if (c > 10)
-      print -c
+      print (-c)
     else
-      print c
+      print (c)
     println ("Hello World")
   }
 }

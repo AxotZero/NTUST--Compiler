@@ -5,3 +5,4 @@ object HelloWorld {
     print ("Hello World")
   }
 }
+

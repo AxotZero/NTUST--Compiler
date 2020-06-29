@@ -306,13 +306,23 @@ simple_statement:
     }|
     PRINT {
         CG.print_start();
-    }  expression {
-        CG.print_int_end();
+    } '(' expression ')' {
+        if($4->get_type() == String){
+            CG.print_str_end();
+        }
+        else{
+            CG.print_int_end();
+        }
     }
     | PRINTLN {
         CG.print_start();
     }'(' expression ')'{
-        CG.print_str_end();
+        if($4->get_type() == String){
+            CG.println_str_end();
+        }
+        else{
+            CG.println_int_end();
+        }
     }
     | READ ID
     {
@@ -599,7 +609,7 @@ func_call:
 
         if(func->check_input_types($3) == false){ yyerror("Function arguments does not match");}
         
-        if(func->get_return_type() == None){ yyerror(string("Function:") + func->get_id_name() + " has no return type");}
+        
         $$ = func->get_return_type();
 
         CG.func_call(func);
@@ -624,7 +634,7 @@ comma_separated_expressions:
 block:
     '{' 
     {
-        ST.push();
+        ST.push_block();
     } const_var_decs statements empty_or_more_statements '}'
     {
         Trace("Reducing to block")
@@ -643,23 +653,31 @@ if_condition:
     } block_or_statement else_condition
     {
         Trace("Reducing to IF condition");
-
         CG.if_end();
-    };
+    }
+    ;
 
 else_condition:
     /* empty */
-    | ELSE {
+    | ELSE 
+    {
         CG.else_start();
-    } block_or_statement;
+    } block_or_statement
 
 loop:
-    WHILE '(' expression ')'
+    WHILE
     {
-        if($3->get_type() != Boolean) yyerror("while statement should be boolean value");
+        CG.while_start();
+    } '(' expression ')'
+    {
+        if($4->get_type() != Boolean) yyerror("while statement should be boolean value");
+
+        CG.if_start();
     } block_or_statement
     {
         Trace("Reducing to WHILE-LOOP");
+
+        CG.while_end();
     } |
     FOR '(' ID '<' '-' CONST_INT TO CONST_INT ')'
     {

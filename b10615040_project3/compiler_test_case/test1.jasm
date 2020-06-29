@@ -1,0 +1,31 @@
+class compiler_test_case/test1
+{
+method public static void main(java.lang.String[])
+max_stack 15
+max_locals 15
+{
+sipush 1
+istore 0
+L0:
+iload 0
+sipush 10
+isub
+iflt L1
+iconst_0
+goto L2
+L1:
+iconst_1
+L2:
+ifeq L3
+iload 0
+sipush 1
+iadd
+istore 0
+goto　L0
+L3:
+getstatic java.io.PrintStream java.lang.System.out
+iload 0
+invokevirtual void java.io.PrintStream.print(int)
+return
+}
+}

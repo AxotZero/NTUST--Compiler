@@ -167,6 +167,7 @@ private:
 public:
 	int last_index;
 	SymbolTable(){ last_index = 0;}
+	SymbolTable(int index){ last_index = index;}
 
     Symbol* lookup(string s){
 		if (table.find(s) != table.end()) {
@@ -201,6 +202,9 @@ public:
 			return 1;
 		}
     }
+	int get_last_index(){
+		return last_index;
+	}
 
     // void dump(){
     // 	for(auto p : table){
@@ -225,6 +229,11 @@ public:
 	void push(){
 		++top;
 		tables.push_back(SymbolTable());
+	}
+	void push_block(){
+		int last_index = tables[top].get_last_index();
+		++top;
+		tables.push_back(SymbolTable(last_index + 1));
 	}
 	void pop(){
 		--top;
